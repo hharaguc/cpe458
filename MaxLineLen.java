@@ -1,7 +1,7 @@
 // Holly Haraguchi
 // CPE 458, Winter 2017
 // Lab 11, Part 2
-// Outputs the longest sentence in "Pride and Prejudice" by Jane Austen
+// Outputs the longest sentence in "The Irish Penny Journal"
 
 // Section 1: Imports
 import org.apache.hadoop.io.LongWritable; // Hadoop's serialized int wrapper class
@@ -12,39 +12,25 @@ import org.apache.hadoop.mapreduce.Job; // the MapReduce job class that is used 
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat; // class for "pointing" at input file(s)
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat; // class for "pointing" at output file
 import org.apache.hadoop.fs.Path;                // Hadoop's implementation of directory path/filename
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat; 
 import org.apache.hadoop.conf.Configuration; // Hadoop's configuration object
 
 // Exception handling
 import java.io.IOException;
 
-// Finds the longest sentence in "Pride and Prejudice" by Jane Austen
 public class MaxLineLen {
-
     // Mapper Class
     public static class MaxLenMapper extends Mapper< LongWritable, Text, Text, Text > {
         @Override
         public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
             // Regex found here: http://stackoverflow.com/questions/28554260/split-text-with-quotes-into-sentences-using-breakiterator-java
-            String[] sentences = value.toString.split("(?<!Mrs?\\.)(?<=\\.)\\s+(?=(?:\"[^\"]*\"|[^\"])*$)");
-            int maxLen = 0;
-            String maxSent = "";
-
-            // Find the longest sentence in this mapper
-            for (String sentence : sentences) {
-                // Don't include spaces in the sentence length
-                int curLen = sentence.replace(" ", "").length()
-
-                // New longest sentence found; update variables
-                if (curLen > maxLen) {
-                    maxLen = curLen;
-                    maxSent = sentence;
-                }
+            String[] sentences = value.toString().split("(?<!Mrs?\\.)(?<=\\.)\\s+(?=(?:\"[^\"]*\"|[^\"])*$)");
+            
+            // Output each sentence found with an arbitrary key
+            for (String sent : sentences) {
+                context.write(new Text("key"), new Text(sent + "///" + sent.replace(" " , "").length()));   
             }
 
-            // Output the max sentence found with an arbitrary key
-            context.write("key", new Text(maxSent + "," + maxLen));   
-        }
+        } 
     }
 
     // Reducer Class
@@ -55,31 +41,32 @@ public class MaxLineLen {
             String maxSent = "";
 
             for (Text val : values) {
-                String[] splits = val.toString().split(",");
-
-                if (splits[1] > maxLen) {
-                    maxLen = splits[1];
+                String[] splits = val.toString().split("///");
+                int curLen = Integer.parseInt(splits[1]);
+                if (curLen > maxLen) {
+                    maxLen = curLen;
                     maxSent = splits[0];
                 }
             }
             
             // Output the file's longest line + line length
-            context.write(maxSent, maxLen);
-        }
+            context.write(new Text(maxSent), new Text(Integer.toString(maxLen)));
+      }
     }
+
 
     // Section 4:  MapReduce Driver
     public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
         // Step 1: get a new MapReduce Job object
-        Job job = Job.getInstance();  
+        Job job = Job.getInstance(conf);  
 
         // Step 2: register the MapReduce class
         job.setJarByClass(MaxLineLen.class);  
 
         // Step 3:  Set Input and Output files
-        FileInputFormat.setInputPaths(job, new Path("sense.txt")); 
+        FileInputFormat.setInputPaths(job, new Path("pride.txt")); 
         FileOutputFormat.setOutputPath(job, new Path("maxLine-out")); 
-        job.setInputFormatClass(TextInputFormat.class); 
 
         // Step 4:  Register mapper and reducer
         job.setMapperClass(MaxLenMapper.class);
