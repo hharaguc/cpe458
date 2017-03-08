@@ -1,7 +1,7 @@
 // Holly Haraguchi
 // CPE 458, Winter 2017
 // Lab 11, Part 2
-// Outputs the longest sentence in "The Irish Penny Journal"
+// Outputs the longest sentence in "Pride and Prejudice" by Jane Austen
 
 // Section 1: Imports
 import org.apache.hadoop.io.LongWritable; // Hadoop's serialized int wrapper class
@@ -26,6 +26,7 @@ public class MaxLineLen {
             String[] sentences = value.toString().split("(?<!Mrs?\\.)(?<=\\.)\\s+(?=(?:\"[^\"]*\"|[^\"])*$)");
             
             // Output each sentence found with an arbitrary key
+            // Ignore whitespace in the length
             for (String sent : sentences) {
                 context.write(new Text("key"), new Text(sent + "///" + sent.replace(" " , "").length()));   
             }
